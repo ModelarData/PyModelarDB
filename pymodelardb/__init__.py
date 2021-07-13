@@ -23,4 +23,4 @@ apilevel = "2.0"
 threadsafety = 1
 paramstyle = "pyformat"
 
-connection = connection.Connection
+connect = connection.Connection
