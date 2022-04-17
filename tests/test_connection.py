@@ -11,12 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import unittest
 import socket
 
 from pymodelardb.connection import Connection
-from pymodelardb.types import ProgrammingError, NotSupportedError, DEFAULT_PORT_NUMBER
-from pymodelardb.cursors import ArrowCursor, HTTPCursor, SocketCursor
+from pymodelardb.types import ProgrammingError
+from pymodelardb.types import NotSupportedError
+from pymodelardb.types import DEFAULT_PORT_NUMBER
+from pymodelardb.cursors import ArrowCursor
+from pymodelardb.cursors import HTTPCursor
+from pymodelardb.cursors import SocketCursor
 
 
 class ConnectionTest(unittest.TestCase):
@@ -101,7 +106,7 @@ class ConnectionTest(unittest.TestCase):
 
     def test_construct_host_interface_with_port_correct(self):
         Connection(host="localhost", interface="http",
-                port=DEFAULT_PORT_NUMBER + 1)
+                   port=DEFAULT_PORT_NUMBER + 1)
 
     def test_construct_host_interface_wrong_interface(self):
         with self.assertRaises(ProgrammingError):

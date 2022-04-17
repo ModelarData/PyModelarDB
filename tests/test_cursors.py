@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import time
 import json
 import locale
@@ -23,10 +24,13 @@ from pyarrow import flight
 
 import socket
 
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import HTTPServer
+from http.server import BaseHTTPRequestHandler
 
 from pymodelardb.connection import Connection
-from pymodelardb.types import ProgrammingError, TypeOf, DEFAULT_PORT_NUMBER
+from pymodelardb.types import ProgrammingError
+from pymodelardb.types import TypeOf
+from pymodelardb.types import DEFAULT_PORT_NUMBER
 
 
 def parse_ts(timestamp: str):
@@ -95,12 +99,12 @@ class CursorTest(object):
         self.test_execute_select_rows()
         description = self.cursor.description
         self.assertEqual(len(description), 3)
-        self.assertEqual(description[0],
-                ('TID', TypeOf.NUMBER, None, None, None, None, False))
-        self.assertEqual(description[1],
-                ('TIMESTAMP', TypeOf.NUMBER, None, None, None, None, False))
-        self.assertEqual(description[2],
-                ('VALUE', TypeOf.NUMBER, None, None, None, None, False))
+        self.assertEqual(description[0], ('TID',
+                         TypeOf.NUMBER, None, None, None, None, False))
+        self.assertEqual(description[1], ('TIMESTAMP',
+                         TypeOf.STRING, None, None, None, None, False))
+        self.assertEqual(description[2], ('VALUE',
+                         TypeOf.NUMBER, None, None, None, None, False))
         self.assertEqual(self.cursor.rowcount, 3)
 
     def test_execute_select_rows_fetchone(self):
@@ -139,7 +143,7 @@ class CursorTest(object):
         description = self.cursor.description
         self.assertEqual(len(description), 1)
         self.assertEqual(description[0], ('MIN(VALUE)',
-                          TypeOf.NUMBER, None, None, None, None, False))
+                         TypeOf.STRING, None, None, None, None, False))
         self.assertEqual(self.cursor.rowcount, 1)
 
     def test_execute_select_empty(self):
@@ -205,7 +209,7 @@ class ArrowCursorTest(CursorTest, unittest.TestCase):
         cls.thread = threading.Thread(target=cls.start_server, args=())
         cls.thread.start()
         # Ensure that the server runs without adding complexity to the tests
-        time.sleep(0.25) 
+        time.sleep(0.25)
 
     @classmethod
     def start_server(cls):
@@ -227,7 +231,7 @@ class ArrowCursorTest(CursorTest, unittest.TestCase):
             columns = [(next(iter(rows[0])), pyarrow.float64())]
         elif len(rows[0]) == 3:  # The result set contains data points
             columns = [('TID', pyarrow.int32()), ('TIMESTAMP',
-                pyarrow.timestamp('ms')), ('VALUE', pyarrow.float64())]
+                       pyarrow.timestamp('ms')), ('VALUE', pyarrow.float64())]
         else:
             raise ValueError("unknown schema")
         schema = pyarrow.schema(columns)
@@ -261,12 +265,12 @@ class ArrowCursorTest(CursorTest, unittest.TestCase):
         self.test_execute_select_rows()
         description = self.cursor.description
         self.assertEqual(len(description), 3)
-        self.assertEqual(description[0],
-                ('TID', TypeOf.NUMBER, None, None, None, None, False))
-        self.assertEqual(description[1],
-                ('TIMESTAMP', TypeOf.DATETIME, None, None, None, None, False))
-        self.assertEqual(description[2],
-                ('VALUE', TypeOf.NUMBER, None, None, None, None, False))
+        self.assertEqual(description[0], ('TID',
+                         TypeOf.NUMBER, None, None, None, None, False))
+        self.assertEqual(description[1], ('TIMESTAMP',
+                         TypeOf.DATETIME, None, None, None, None, False))
+        self.assertEqual(description[2], ('VALUE',
+                         TypeOf.NUMBER, None, None, None, None, False))
         self.assertEqual(self.cursor.rowcount, -1)
 
     def test_execute_select_rows_fetchone(self):
@@ -293,7 +297,7 @@ class ArrowCursorTest(CursorTest, unittest.TestCase):
         description = self.cursor.description
         self.assertEqual(len(description), 1)
         self.assertEqual(description[0], ('MIN(VALUE)',
-                          TypeOf.NUMBER, None, None, None, None, False))
+                         TypeOf.NUMBER, None, None, None, None, False))
         self.assertEqual(self.cursor.rowcount, -1)
 
     def test_execute_select_empty_metadata(self):
@@ -308,8 +312,8 @@ class TestHTTPRequestHandler(BaseHTTPRequestHandler):
         self.send_header('Content-type', 'application/json')
         self.end_headers()
         self.wfile.write(self.response)
-        time.sleep(0.25)   # Ensure that the response is read without
-                           # adding unnecessary complexity to the tests
+        # Ensure the response is read without adding complexity to the test
+        time.sleep(0.25)
 
     def log_message(self, format, *args):
         pass  # Stop messages being written to stdout
@@ -322,7 +326,8 @@ class HTTPCursorTest(CursorTest, unittest.TestCase):
         cls.dsn = "http://localhost"
         HTTPServer.allow_reuse_address = True
         cls.handler = TestHTTPRequestHandler
-        cls.server = HTTPServer(("localhost", DEFAULT_PORT_NUMBER), cls.handler)
+        cls.server = HTTPServer(
+            ("localhost", DEFAULT_PORT_NUMBER), cls.handler)
         cls.server.timeout = 0.20
         cls.response = b""
 
@@ -349,8 +354,9 @@ class SocketCursorTest(CursorTest, unittest.TestCase):
         while cls.run_server:
             conn, _ = cls.socket.accept()
             conn.sendall(cls.response)
-            time.sleep(0.25)  # Ensure that the response is read without
-            conn.close()      # adding unnecessary complexity to the tests
+            # Ensure the response is read without adding complexity to the test
+            time.sleep(0.25)
+            conn.close()
         cls.socket.close()
 
     @classmethod

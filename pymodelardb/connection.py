@@ -14,7 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pymodelardb.types import Interface, NotSupportedError, ProgrammingError, DEFAULT_PORT_NUMBER
+from pymodelardb.types import Interface
+from pymodelardb.types import NotSupportedError
+from pymodelardb.types import ProgrammingError
+from pymodelardb.types import DEFAULT_PORT_NUMBER
 
 __all__ = ['Connection']
 
@@ -39,22 +42,22 @@ class Connection(object):
         :param port: the port number ModelarDB or MiniModelarDB is configured
         to used for its interface (defaults to 9999 if not specified).
     """
-    def __init__(self, dsn: str=None, user: str=None, password: str=None,
-                 host: str=None, database: str=None, interface: str=None,
-                 port: int=DEFAULT_PORT_NUMBER):
+    def __init__(self, dsn: str = None, user: str = None, password: str = None,
+                 host: str = None, database: str = None, interface: str = None,
+                 port: int = DEFAULT_PORT_NUMBER):
 
         # Ensure the necessary parameters have been provided
         if user or password or database:
             raise NotSupportedError(
-                    "only dsn, host, interface, and port is supported")
+                  "only dsn, host, interface, and port is supported")
         elif dsn:   # The connection string is given precedence
             try:
                 interface, hostAndMaybePort = dsn.split('://')
                 hostAndMaybePortSplit = hostAndMaybePort.split(':')
                 host = hostAndMaybePortSplit[0]
                 port = int(hostAndMaybePortSplit[1]) \
-                        if 1 < len(hostAndMaybePortSplit) \
-                        else DEFAULT_PORT_NUMBER
+                    if 1 < len(hostAndMaybePortSplit) \
+                    else DEFAULT_PORT_NUMBER
             except ValueError:
                 raise ProgrammingError(
                     "dsn must be interface://hostname-or-ip[:port]") from None

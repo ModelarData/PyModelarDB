@@ -16,9 +16,11 @@ HTTP, or socket) and MiniModelarDB (Apache Arrow Flight) supports."""
 # limitations under the License.
 
 import itertools
-import json
 import locale
 import re
+
+import json
+from json.decoder import JSONDecodeError
 
 from telnetlib import Telnet
 from typing import Any, Union
@@ -30,10 +32,10 @@ from pyarrow import flight
 from pyarrow.lib import ArrowException
 from pyarrow._flight import FlightUnavailableError
 from pyarrow._flight import FlightStreamReader
-from pyarrow._flight import FlightUnavailableError
 
 from pymodelardb.connection import Connection
-from pymodelardb.types import ProgrammingError, TypeOf
+from pymodelardb.types import ProgrammingError
+from pymodelardb.types import TypeOf
 
 __all__ = ['ArrowCursor', 'HTTPCursor', 'SocketCursor']
 
@@ -52,7 +54,7 @@ class Cursor(object):
         self._rowcount = -1
         self.arraysize = 1
         self._result_set = None
-        self.__placeholder_search = re.compile("%\((.*?)\)s")
+        self.__placeholder_search = re.compile("%\\((.*?)\\)s")
 
     @property
     def description(self):
@@ -83,10 +85,10 @@ class Cursor(object):
         self._is_result_set_ready()
         try:
             return next(self._result_set)
-        except:
+        except Exception:
             return None
 
-    def fetchmany(self, size: Union[int, None]=None):
+    def fetchmany(self, size: Union[int, None] = None):
         """Return the next size rows from the result set."""
         self._is_closed("cannot fetch multiple rows as the cursor is closed")
         self._is_result_set_ready()
@@ -110,12 +112,12 @@ class Cursor(object):
 
     def _before_execute(self, operation: str, parameters=None):
         """Ensure the cursor is ready and add the parameters to operation."""
-        # Parameters are not escaped as ModelarDB is read-only
-        if parameters is dict:
-            operation % parameters
-        elif parameters is list or parameters is tuple:
+        # Parameters are not escaped as both model-based TSMSs are read-only
+        if type(parameters) == dict:
+            operation %= parameters
+        elif type(parameters) == list or type(parameters) == tuple:
             placeholders = self.__placeholder_search.findall(operation)
-            operation % dict(zip(placeholders, parameters))
+            operation %= dict(zip(placeholders, parameters))
         return operation.encode(self._encoding)
 
     def _after_execute(self, response: bytes):
@@ -123,7 +125,7 @@ class Cursor(object):
         result = response.decode(self._encoding)
         try:
             result_set = json.loads(result)['result']
-        except json.decoder.JSONDecodeError:
+        except JSONDecodeError:
             # Extract the exception thrown by the server's query engine
             start_of_error = result.find('[') + 1
             end_of_error = result.rfind(']')
@@ -142,7 +144,7 @@ class Cursor(object):
         if result_set:
             for name, value in result_set[0].items():
                 type_code = TypeOf.STRING if type(value) is str \
-                        else TypeOf.NUMBER
+                    else TypeOf.NUMBER
                 description \
                     .append((name, type_code, None, None, None, None, False))
         self._description = tuple(description)
@@ -165,16 +167,16 @@ class ArrowCursor(Cursor):
         self.__uri = 'grpc://' + host + ':' + str(port)
         self.__client = flight.FlightClient(self.__uri)
         self.__type_map = {
-                pyarrow.string(): TypeOf.STRING,
-                pyarrow.int32(): TypeOf.NUMBER,
-                pyarrow.timestamp('ms'): TypeOf.DATETIME,  # DataFusion and H2
-                pyarrow.timestamp('us', 'UTC'): TypeOf.DATETIME,  # Spark
-                pyarrow.float32(): TypeOf.NUMBER,
-                pyarrow.float64(): TypeOf.NUMBER,  # For testing
-                pyarrow.binary(): TypeOf.BINARY
-                }
+            pyarrow.string(): TypeOf.STRING,
+            pyarrow.int32(): TypeOf.NUMBER,
+            pyarrow.timestamp('ms'): TypeOf.DATETIME,  # DataFusion and H2
+            pyarrow.timestamp('us', 'UTC'): TypeOf.DATETIME,  # Spark
+            pyarrow.float32(): TypeOf.NUMBER,
+            pyarrow.float64(): TypeOf.NUMBER,  # For testing
+            pyarrow.binary(): TypeOf.BINARY
+        }
 
-    def execute(self, operation: str, parameters: Any=None):
+    def execute(self, operation: str, parameters: Any = None):
         """Execute operation after adding the parameters."""
         self._is_closed("cannot execute queries as the cursor is closed")
         message = self._before_execute(operation.strip(), parameters)
@@ -183,8 +185,8 @@ class ArrowCursor(Cursor):
             response = self.__client.do_get(query)
             self._after_execute(response)
         except FlightUnavailableError:
-            raise ProgrammingError("unable to connect to: "
-                    + self.__uri) from None
+            raise ProgrammingError("unable to connect to: " +
+                                   self.__uri) from None
         except ArrowException as ae:
             error = ae.args[0]
             start_of_error = error.find('{')
@@ -203,7 +205,7 @@ class ArrowCursor(Cursor):
         for name, type_name in zip(schema.names, schema.types):
             type_code = self.__type_map[type_name]
             description.append(
-                    (name, type_code, None, None, None, None, False))
+                (name, type_code, None, None, None, None, False))
 
         self._result_set = self.__wrap_with_generator(response)
         self._description = tuple(description)
@@ -216,7 +218,7 @@ class ArrowCursor(Cursor):
             columns = chunk.to_pydict()
             names = chunk.schema.names
             result_set = [tuple(columns[column][row] for column in names)
-                    for row in range(chunk.num_rows)]
+                          for row in range(chunk.num_rows)]
             for row in result_set:
                 yield row
 
@@ -226,7 +228,7 @@ class HTTPCursor(Cursor):
         Cursor.__init__(self, connection)
         self.__uri = 'http://' + host + ':' + str(port)
 
-    def execute(self, operation: str, parameters: Any=None):
+    def execute(self, operation: str, parameters: Any = None):
         """Execute operation after adding the parameters."""
         self._is_closed("cannot execute queries as the cursor is closed")
         message = self._before_execute(operation.strip(), parameters)
@@ -234,7 +236,8 @@ class HTTPCursor(Cursor):
             response = request.urlopen(self.__uri, message)
         except URLError:
             message = "unable to connect to: " + self.__uri
-            raise ProgrammingError("unable to connect to: " + self.__uri) from None
+            raise ProgrammingError("unable to connect to: " +
+                                   self.__uri) from None
         self._after_execute(response.read())
         response.close()
 
@@ -254,7 +257,7 @@ class SocketCursor(Cursor):
         self.__telnet.close()
         super().close()
 
-    def execute(self, operation: str, parameters: Any=None):
+    def execute(self, operation: str, parameters: Any = None):
         """Execute operation after adding the parameters."""
         self._is_closed("cannot execute queries as the cursor is closed")
         message = self._before_execute(operation.strip() + '\n', parameters)
