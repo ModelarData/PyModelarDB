@@ -1,4 +1,5 @@
-"""Implementation of Cursors for the interfaces ModelarDB supports."""
+"""Implementation of Cursors for the interfaces ModelarDB (Apache Arrow Flight,
+HTTP, or socket) and MiniModelarDB (Apache Arrow Flight) supports."""
 
 # Copyright 2021 The PyModelarDB Contributors
 #
@@ -23,14 +24,21 @@ from telnetlib import Telnet
 from typing import Any, Union
 from urllib import request
 
+import pyarrow
+from pyarrow import flight
+from pyarrow.lib import ArrowException
+from pyarrow._flight import FlightUnavailableError
+from pyarrow._flight import FlightStreamReader
+from pyarrow._flight import FlightUnavailableError
+
 from pymodelardb.connection import Connection
 from pymodelardb.types import ProgrammingError, TypeOf
 
-__all__ = ['HTTPCursor', 'SocketCursor']
+__all__ = ['ArrowCursor', 'HTTPCursor', 'SocketCursor']
 
 
 class Cursor(object):
-    """Represents a single connection to ModelarDB.
+    """Represents a single connection to ModelarDB or MiniModelarDB.
 
        Arguments:
 
@@ -147,6 +155,67 @@ class Cursor(object):
         """Check if a result set have been retrieved from the database."""
         if not self._result_set:
             raise ProgrammingError("a result set is currently not available")
+
+
+class ArrowCursor(Cursor):
+    def __init__(self, connection: Connection):
+        Cursor.__init__(self, connection)
+        self.__client = flight.FlightClient(self._connection._host)
+        self.__type_map = {
+                pyarrow.string(): TypeOf.STRING,
+                pyarrow.int32(): TypeOf.NUMBER,
+                pyarrow.timestamp('ms'): TypeOf.DATETIME,  # DataFusion and H2
+                pyarrow.timestamp('us', 'UTC'): TypeOf.DATETIME,  # Spark
+                pyarrow.float32(): TypeOf.NUMBER,
+                pyarrow.float64(): TypeOf.NUMBER,  # For testing
+                pyarrow.binary(): TypeOf.BINARY
+                }
+
+    def execute(self, operation: str, parameters: Any=None):
+        """Execute operation after adding the parameters."""
+        self._is_closed("cannot execute queries as the cursor is closed")
+        message = self._before_execute(operation.strip(), parameters)
+        query = flight.Ticket(message)
+        try:
+            response = self.__client.do_get(query)
+            self._after_execute(response)
+        except FlightUnavailableError:
+            raise ProgrammingError("unable to connect to: "
+                    + self._connection._host) from None
+        except ArrowException as ae:
+            error = ae.args[0]
+            start_of_error = error.find('{')
+            end_of_error = error.rfind('}') + 1
+            error = json.loads(error[start_of_error: end_of_error])
+            message = 'unable to execute query due to: ' \
+                + error['grpc_message'].strip()
+            raise ProgrammingError(message) from None
+
+    def _after_execute(self, response: FlightStreamReader):
+        """Convert the response received from ModelarDB or MiniModelarDB."""
+
+        # Only the name and type_code is mandatory, the rest can be None
+        description = []
+        schema = response.schema
+        for name, type_name in zip(schema.names, schema.types):
+            type_code = self.__type_map[type_name]
+            description.append(
+                    (name, type_code, None, None, None, None, False))
+
+        self._result_set = self.__wrap_with_generator(response)
+        self._description = tuple(description)
+        self._rowcount = -1  # The result set is returned in batches
+
+    def __wrap_with_generator(self, fsr: FlightStreamReader):
+        """Wrap the stream of chunks with a generator that produce tuples."""
+        for chunk in fsr:
+            chunk = chunk.data
+            columns = chunk.to_pydict()
+            names = chunk.schema.names
+            result_set = [tuple(columns[column][row] for column in names)
+                    for row in range(chunk.num_rows)]
+            for row in result_set:
+                yield row
 
 
 class HTTPCursor(Cursor):

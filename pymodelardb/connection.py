@@ -28,16 +28,19 @@ class Connection(object):
        Arguments:
 
         :param dsn: connecting string as interface://hostname-or-ip where
-        interface is HTTP or socket depending on ModelarDB's configuration.
+        interface is Arrow, HTTP, or socket for ModelarDB (depending how it is
+        configured) or Arrow for MiniModelarDB.
         :param user: unsupported parameter required by PEP 249.
         :param password: unsupported parameter required by PEP 249.
-        :param host: the hostname or IP where ModelarDB is running.
-        :param interface: the interface used by ModelarDB (HTTP or socket).
+        :param host: the hostname or IP of the host where ModelarDB or
+        MiniModelarDB is running.
+        :param interface: the interface used by ModelarDB (Arrow, HTTP, or
+        socket) or MiniModelarDB (Arrow).
     """
     def __init__(self, dsn: str=None, user: str=None, password: str=None,
                  host: str=None, database: str=None, interface: str=None):
 
-        # Ensures the necessary parameters have been provided
+        # Ensure the necessary parameters have been provided
         if user or password or database:
             raise NotSupportedError("dsn, host, and interface is supported")
         elif dsn:   # The connection string is given precedence
@@ -55,11 +58,16 @@ class Connection(object):
             interface = Interface[interface.upper()]
         except KeyError:
             raise ProgrammingError(
-                "interface must be HTTP or socket") from None
+                "interface must be Arrow, HTTP, or socket") from None
 
-        # Creates a cursor matching the requested interface type
+        # Create a cursor that match the requested interface type. The cursors
+        # are imported from inside the method to break a circular import
         self.__closed = False
-        if interface is Interface.HTTP:
+        if interface is Interface.ARROW:
+            from pymodelardb.cursors import ArrowCursor
+            self._host = 'grpc://' + host + ':9999'
+            self.__cursor = ArrowCursor
+        elif interface is Interface.HTTP:
             from pymodelardb.cursors import HTTPCursor
             self._host = 'http://' + host + ':9999'
             self.__cursor = HTTPCursor

@@ -16,13 +16,13 @@ import socket
 
 from pymodelardb.connection import Connection
 from pymodelardb.types import ProgrammingError, NotSupportedError
-from pymodelardb.cursors import SocketCursor, HTTPCursor
+from pymodelardb.cursors import ArrowCursor, HTTPCursor, SocketCursor
 
 
 class ConnectionTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # Mocks ModelarDB HTTP and Socket interface
+        # Mocks the Apache Arrow Flight, HTTP, and socket interface
         cls.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         cls.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         cls.socket.bind(("localhost", 9999))
@@ -31,6 +31,12 @@ class ConnectionTest(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.socket.close()
+
+    def test_construct_dsn_arrow_correct(self):
+        conn = Connection("arrow://localhost")
+        cursor = conn.cursor()
+        self.assertIsInstance(cursor, ArrowCursor)
+        cursor.close()
 
     def test_construct_dsn_http_correct(self):
         conn = Connection("http://localhost")
@@ -43,6 +49,10 @@ class ConnectionTest(unittest.TestCase):
         cursor = conn.cursor()
         self.assertIsInstance(cursor, SocketCursor)
         cursor.close()
+
+    def test_construct_dsn_arrow_wrong_separator(self):
+        with self.assertRaises(ProgrammingError):
+            Connection("arrow:/localhost")
 
     def test_construct_dsn_http_wrong_separator(self):
         with self.assertRaises(ProgrammingError):
@@ -67,6 +77,12 @@ class ConnectionTest(unittest.TestCase):
     def test_construct_database(self):
         with self.assertRaises(NotSupportedError):
             Connection(database="database")
+
+    def test_construct_host_interface_arrow_correct(self):
+        conn = Connection(host="localhost", interface="arrow")
+        cursor = conn.cursor()
+        self.assertIsInstance(cursor, ArrowCursor)
+        cursor.close()
 
     def test_construct_host_interface_http_correct(self):
         conn = Connection(host="localhost", interface="http")
