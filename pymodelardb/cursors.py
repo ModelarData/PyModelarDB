@@ -141,7 +141,8 @@ class Cursor(object):
         description = []
         if result_set:
             for name, value in result_set[0].items():
-                type_code = TypeOf.STRING if value is str else TypeOf.NUMBER
+                type_code = TypeOf.STRING if type(value) is str \
+                        else TypeOf.NUMBER
                 description \
                     .append((name, type_code, None, None, None, None, False))
         self._description = tuple(description)
