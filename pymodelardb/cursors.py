@@ -23,6 +23,7 @@ import re
 from telnetlib import Telnet
 from typing import Any, Union
 from urllib import request
+from urllib.error import URLError
 
 import pyarrow
 from pyarrow import flight
@@ -158,9 +159,10 @@ class Cursor(object):
 
 
 class ArrowCursor(Cursor):
-    def __init__(self, connection: Connection):
+    def __init__(self, connection: Connection, host: str, port: int):
         Cursor.__init__(self, connection)
-        self.__client = flight.FlightClient(self._connection._host)
+        self.__uri = 'grpc://' + host + ':' + str(port)
+        self.__client = flight.FlightClient(self.__uri)
         self.__type_map = {
                 pyarrow.string(): TypeOf.STRING,
                 pyarrow.int32(): TypeOf.NUMBER,
@@ -181,7 +183,7 @@ class ArrowCursor(Cursor):
             self._after_execute(response)
         except FlightUnavailableError:
             raise ProgrammingError("unable to connect to: "
-                    + self._connection._host) from None
+                    + self.__uri) from None
         except ArrowException as ae:
             error = ae.args[0]
             start_of_error = error.find('{')
@@ -219,22 +221,31 @@ class ArrowCursor(Cursor):
 
 
 class HTTPCursor(Cursor):
-    def __init__(self, connection: Connection):
+    def __init__(self, connection: Connection, host: str, port: int):
         Cursor.__init__(self, connection)
+        self.__uri = 'http://' + host + ':' + str(port)
 
     def execute(self, operation: str, parameters: Any=None):
         """Execute operation after adding the parameters."""
         self._is_closed("cannot execute queries as the cursor is closed")
         message = self._before_execute(operation.strip(), parameters)
-        response = request.urlopen(self._connection._host, message)
+        try:
+            response = request.urlopen(self.__uri, message)
+        except URLError:
+            message = "unable to connect to: " + self.__uri
+            raise ProgrammingError("unable to connect to: " + self.__uri) from None
         self._after_execute(response.read())
         response.close()
 
 
 class SocketCursor(Cursor):
-    def __init__(self, connection: Connection):
+    def __init__(self, connection: Connection, host: str, port: int):
         Cursor.__init__(self, connection)
-        self.__telnet = Telnet(self._connection._host, 9999)
+        try:
+            self.__telnet = Telnet(host, port)
+        except ConnectionRefusedError:
+            message = "unable to connect to: " + host + ':' + str(port)
+            raise ProgrammingError(message) from None
 
     def close(self):
         """Close the socket and mark the cursor as closed."""

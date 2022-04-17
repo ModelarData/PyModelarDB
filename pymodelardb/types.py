@@ -18,6 +18,8 @@
 
 from enum import Enum
 
+DEFAULT_PORT_NUMBER = 9999
+
 
 class Error(Exception):
     """Base error for all other errors to derive from."""

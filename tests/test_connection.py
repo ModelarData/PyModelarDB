@@ -15,7 +15,7 @@ import unittest
 import socket
 
 from pymodelardb.connection import Connection
-from pymodelardb.types import ProgrammingError, NotSupportedError
+from pymodelardb.types import ProgrammingError, NotSupportedError, DEFAULT_PORT_NUMBER
 from pymodelardb.cursors import ArrowCursor, HTTPCursor, SocketCursor
 
 
@@ -25,7 +25,7 @@ class ConnectionTest(unittest.TestCase):
         # Mocks the Apache Arrow Flight, HTTP, and socket interface
         cls.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         cls.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        cls.socket.bind(("localhost", 9999))
+        cls.socket.bind(("localhost", DEFAULT_PORT_NUMBER))
         cls.socket.listen()
 
     @classmethod
@@ -49,6 +49,9 @@ class ConnectionTest(unittest.TestCase):
         cursor = conn.cursor()
         self.assertIsInstance(cursor, SocketCursor)
         cursor.close()
+
+    def test_construct_dsn_with_port_correct(self):
+        Connection("http://localhost:" + str(DEFAULT_PORT_NUMBER + 1))
 
     def test_construct_dsn_arrow_wrong_separator(self):
         with self.assertRaises(ProgrammingError):
@@ -95,6 +98,10 @@ class ConnectionTest(unittest.TestCase):
         cursor = conn.cursor()
         self.assertIsInstance(cursor, SocketCursor)
         cursor.close()
+
+    def test_construct_host_interface_with_port_correct(self):
+        Connection(host="localhost", interface="http",
+                port=DEFAULT_PORT_NUMBER + 1)
 
     def test_construct_host_interface_wrong_interface(self):
         with self.assertRaises(ProgrammingError):

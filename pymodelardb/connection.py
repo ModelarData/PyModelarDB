@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pymodelardb.types import Interface, NotSupportedError, ProgrammingError
+from pymodelardb.types import Interface, NotSupportedError, ProgrammingError, DEFAULT_PORT_NUMBER
 
 __all__ = ['Connection']
 
@@ -36,19 +36,28 @@ class Connection(object):
         MiniModelarDB is running.
         :param interface: the interface used by ModelarDB (Arrow, HTTP, or
         socket) or MiniModelarDB (Arrow).
+        :param port: the port number ModelarDB or MiniModelarDB is configured
+        to used for its interface (defaults to 9999 if not specified).
     """
     def __init__(self, dsn: str=None, user: str=None, password: str=None,
-                 host: str=None, database: str=None, interface: str=None):
+                 host: str=None, database: str=None, interface: str=None,
+                 port: int=DEFAULT_PORT_NUMBER):
 
         # Ensure the necessary parameters have been provided
         if user or password or database:
-            raise NotSupportedError("dsn, host, and interface is supported")
+            raise NotSupportedError(
+                    "only dsn, host, interface, and port is supported")
         elif dsn:   # The connection string is given precedence
             try:
-                interface, host = dsn.split("://")
+                interface, hostAndMaybePort = dsn.split('://')
+                hostAndMaybePortSplit = hostAndMaybePort.split(':')
+                host = hostAndMaybePortSplit[0]
+                port = int(hostAndMaybePortSplit[1]) \
+                        if 1 < len(hostAndMaybePortSplit) \
+                        else DEFAULT_PORT_NUMBER
             except ValueError:
                 raise ProgrammingError(
-                    "dsn must be interface://hostname-or-ip") from None
+                    "dsn must be interface://hostname-or-ip[:port]") from None
         elif host and interface:
             pass
         else:
@@ -60,20 +69,21 @@ class Connection(object):
             raise ProgrammingError(
                 "interface must be Arrow, HTTP, or socket") from None
 
+        # Store the host and port so cursor(self) can pass them to the Cursor
+        self.__host = host
+        self.__port = port
+
         # Create a cursor that match the requested interface type. The cursors
         # are imported from inside the method to break a circular import
         self.__closed = False
         if interface is Interface.ARROW:
             from pymodelardb.cursors import ArrowCursor
-            self._host = 'grpc://' + host + ':9999'
             self.__cursor = ArrowCursor
         elif interface is Interface.HTTP:
             from pymodelardb.cursors import HTTPCursor
-            self._host = 'http://' + host + ':9999'
             self.__cursor = HTTPCursor
         elif interface is Interface.SOCKET:
             from pymodelardb.cursors import SocketCursor
-            self._host = host
             self.__cursor = SocketCursor
 
     def close(self):
@@ -88,7 +98,7 @@ class Connection(object):
     def cursor(self):
         """Construct a new Cursor based on the Connection's interface type."""
         self._is_closed("cannot create a cursor as the connection is closed")
-        return self.__cursor(self)
+        return self.__cursor(self, self.__host, self.__port)
 
     def _is_closed(self, message: str):
         """Check if the connection have been closed."""

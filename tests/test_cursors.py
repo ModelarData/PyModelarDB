@@ -26,7 +26,7 @@ import socket
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 from pymodelardb.connection import Connection
-from pymodelardb.types import ProgrammingError, TypeOf
+from pymodelardb.types import ProgrammingError, TypeOf, DEFAULT_PORT_NUMBER
 
 
 def parse_ts(timestamp: str):
@@ -211,7 +211,8 @@ class ArrowCursorTest(CursorTest, unittest.TestCase):
     def start_server(cls):
         # Mock ModelarDB's and MiniModelarDB's Apache Arrow Flight interface
         cls.dsn = "arrow://localhost"
-        cls.server = ArrowFlightServer(location="grpc://localhost:9999")
+        location = "grpc://localhost:" + str(DEFAULT_PORT_NUMBER)
+        cls.server = ArrowFlightServer(location)
         cls.server.response = None
         cls.server.serve()
 
@@ -321,7 +322,7 @@ class HTTPCursorTest(CursorTest, unittest.TestCase):
         cls.dsn = "http://localhost"
         HTTPServer.allow_reuse_address = True
         cls.handler = TestHTTPRequestHandler
-        cls.server = HTTPServer(("localhost", 9999), cls.handler)
+        cls.server = HTTPServer(("localhost", DEFAULT_PORT_NUMBER), cls.handler)
         cls.server.timeout = 0.20
         cls.response = b""
 
@@ -341,7 +342,7 @@ class SocketCursorTest(CursorTest, unittest.TestCase):
         cls.dsn = "socket://localhost"
         cls.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         cls.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        cls.socket.bind(("localhost", 9999))
+        cls.socket.bind(("localhost", DEFAULT_PORT_NUMBER))
         cls.socket.listen()
         cls.response = b""
 
