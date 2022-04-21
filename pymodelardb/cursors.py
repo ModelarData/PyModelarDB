@@ -169,8 +169,7 @@ class ArrowCursor(Cursor):
         self.__type_map = {
             pyarrow.string(): TypeOf.STRING,
             pyarrow.int32(): TypeOf.NUMBER,
-            pyarrow.timestamp('ms'): TypeOf.DATETIME,  # DataFusion and H2
-            pyarrow.timestamp('us', 'UTC'): TypeOf.DATETIME,  # Spark
+            pyarrow.timestamp('ms'): TypeOf.DATETIME,
             pyarrow.float32(): TypeOf.NUMBER,
             pyarrow.float64(): TypeOf.NUMBER,  # For testing
             pyarrow.binary(): TypeOf.BINARY
