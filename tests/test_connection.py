@@ -11,26 +11,37 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import unittest
 import socket
 
 from pymodelardb.connection import Connection
-from pymodelardb.types import ProgrammingError, NotSupportedError
-from pymodelardb.cursors import SocketCursor, HTTPCursor
+from pymodelardb.types import ProgrammingError
+from pymodelardb.types import NotSupportedError
+from pymodelardb.types import DEFAULT_PORT_NUMBER
+from pymodelardb.cursors import ArrowCursor
+from pymodelardb.cursors import HTTPCursor
+from pymodelardb.cursors import SocketCursor
 
 
 class ConnectionTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # Mocks ModelarDB HTTP and Socket interface
+        # Mocks the Apache Arrow Flight, HTTP, and socket interface
         cls.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         cls.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        cls.socket.bind(("localhost", 9999))
+        cls.socket.bind(("localhost", DEFAULT_PORT_NUMBER))
         cls.socket.listen()
 
     @classmethod
     def tearDownClass(cls):
         cls.socket.close()
+
+    def test_construct_dsn_arrow_correct(self):
+        conn = Connection("arrow://localhost")
+        cursor = conn.cursor()
+        self.assertIsInstance(cursor, ArrowCursor)
+        cursor.close()
 
     def test_construct_dsn_http_correct(self):
         conn = Connection("http://localhost")
@@ -43,6 +54,13 @@ class ConnectionTest(unittest.TestCase):
         cursor = conn.cursor()
         self.assertIsInstance(cursor, SocketCursor)
         cursor.close()
+
+    def test_construct_dsn_with_port_correct(self):
+        Connection("http://localhost:" + str(DEFAULT_PORT_NUMBER + 1))
+
+    def test_construct_dsn_arrow_wrong_separator(self):
+        with self.assertRaises(ProgrammingError):
+            Connection("arrow:/localhost")
 
     def test_construct_dsn_http_wrong_separator(self):
         with self.assertRaises(ProgrammingError):
@@ -68,6 +86,12 @@ class ConnectionTest(unittest.TestCase):
         with self.assertRaises(NotSupportedError):
             Connection(database="database")
 
+    def test_construct_host_interface_arrow_correct(self):
+        conn = Connection(host="localhost", interface="arrow")
+        cursor = conn.cursor()
+        self.assertIsInstance(cursor, ArrowCursor)
+        cursor.close()
+
     def test_construct_host_interface_http_correct(self):
         conn = Connection(host="localhost", interface="http")
         cursor = conn.cursor()
@@ -79,6 +103,10 @@ class ConnectionTest(unittest.TestCase):
         cursor = conn.cursor()
         self.assertIsInstance(cursor, SocketCursor)
         cursor.close()
+
+    def test_construct_host_interface_with_port_correct(self):
+        Connection(host="localhost", interface="http",
+                   port=DEFAULT_PORT_NUMBER + 1)
 
     def test_construct_host_interface_wrong_interface(self):
         with self.assertRaises(ProgrammingError):

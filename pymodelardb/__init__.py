@@ -1,4 +1,4 @@
-"""The official Python PEP 249 client for ModelarDB"""
+"""The official Python PEP 249 client for ModelarDB and MiniModelarDB"""
 
 # Copyright 2021 The PyModelarDB Contributors
 #
@@ -16,7 +16,7 @@
 
 from pymodelardb import connection
 
-__version__ = '0.1'
+__version__ = '0.2'
 __all__ = ['apilevel', 'threadsafety', 'paramstyle', 'connection']
 
 apilevel = "2.0"

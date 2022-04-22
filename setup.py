@@ -22,6 +22,7 @@ setup(
     author='Soeren Kejser Jensen',
     author_email='devel@kejserjensen.dk',
     packages=find_packages(),
+    install_requires=['pyarrow'],
     url='https://github.com/modelardata/pymodelardb',
     license='Apache License 2.0',
     description='Python PEP 249 Client for ModelarDB',
