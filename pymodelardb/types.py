@@ -38,7 +38,9 @@ class NotSupportedError(DatabaseError):
 
 
 class Interface(Enum):
-    """The different interfaces ModelarDB and MiniModelarDB supports."""
+    """The interfaces supported by the current Rust-based version of ModelarDB
+       (ARROW) and the legacy JVM-based version of ModelarDB (ARROW, SOCKET,
+       HTTP)."""
     ARROW = 1
     SOCKET = 2
     HTTP = 3

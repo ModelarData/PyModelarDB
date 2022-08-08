@@ -31,16 +31,17 @@ class Connection(object):
        Arguments:
 
         :param dsn: connecting string as interface://hostname-or-ip where
-        interface is Arrow, HTTP, or socket for ModelarDB (depending how it is
-        configured) or Arrow for MiniModelarDB.
+        interface is Arrow for the current Rust-based version of ModelarDB or
+        Arrow, HTTP, or socket for the legacy JVM-based version of ModelarDB
+        (depending how it is configured).
         :param user: unsupported parameter required by PEP 249.
         :param password: unsupported parameter required by PEP 249.
-        :param host: the hostname or IP of the host where ModelarDB or
-        MiniModelarDB is running.
-        :param interface: the interface used by ModelarDB (Arrow, HTTP, or
-        socket) or MiniModelarDB (Arrow).
-        :param port: the port number ModelarDB or MiniModelarDB is configured
-        to used for its interface (defaults to 9999 if not specified).
+        :param host: the hostname or IP of the host where ModelarDB.
+        :param interface: the interface used by the current Rust-based version
+        of ModelarDB (Arrow) or the legacy JVM-based version of ModelarDB
+        (Arrow, HTTP, or socket).
+        :param port: the port number ModelarDB is configured to used for its
+        interface (defaults to 9999 if not specified).
     """
     def __init__(self, dsn: str = None, user: str = None, password: str = None,
                  host: str = None, database: str = None, interface: str = None,

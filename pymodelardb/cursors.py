@@ -1,5 +1,6 @@
-"""Implementation of Cursors for the interfaces ModelarDB (Apache Arrow Flight,
-HTTP, or socket) and MiniModelarDB (Apache Arrow Flight) supports."""
+"""Implementation of Cursors for the interfaces supported by the current
+ Rust-based version of ModelarDB (Apache Arrow Flight) and the legacy JVM-based
+ version of ModelarDB (Apache Arrow Flight, HTTP, or socket)."""
 
 # Copyright 2021 The PyModelarDB Contributors
 #
@@ -41,7 +42,7 @@ __all__ = ['ArrowCursor', 'HTTPCursor', 'SocketCursor']
 
 
 class Cursor(object):
-    """Represents a single connection to ModelarDB or MiniModelarDB.
+    """Represents a single connection to ModelarDB.
 
        Arguments:
 
@@ -196,7 +197,7 @@ class ArrowCursor(Cursor):
             raise ProgrammingError(message) from None
 
     def _after_execute(self, response: FlightStreamReader):
-        """Convert the response received from ModelarDB or MiniModelarDB."""
+        """Convert the response received from ModelarDB."""
 
         # Only the name and type_code is mandatory, the rest can be None
         description = []
