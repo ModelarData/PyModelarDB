@@ -213,7 +213,7 @@ class ArrowCursorTest(CursorTest, unittest.TestCase):
 
     @classmethod
     def start_server(cls):
-        # Mock ModelarDB's and MiniModelarDB's Apache Arrow Flight interface
+        # Mock ModelarDB's Apache Arrow Flight interface
         cls.dsn = "arrow://localhost"
         location = "grpc://localhost:" + str(DEFAULT_PORT_NUMBER)
         cls.server = ArrowFlightServer(location)

@@ -1,4 +1,4 @@
-"""The official Python PEP 249 client for ModelarDB and MiniModelarDB"""
+"""The official Python PEP 249 client for ModelarDB."""
 
 # Copyright 2021 The PyModelarDB Contributors
 #
