@@ -189,11 +189,10 @@ class ArrowCursor(Cursor):
                                    self.__uri) from None
         except ArrowException as ae:
             error = ae.args[0]
-            start_of_error = error.find('{')
-            end_of_error = error.rfind('}') + 1
-            error = json.loads(error[start_of_error: end_of_error])
-            message = 'unable to execute query due to: ' \
-                + error['grpc_message'].strip()
+            start_of_error = error.find('{') + 1
+            end_of_error = error.rfind('}')
+            error = error[start_of_error: end_of_error]
+            message = 'unable to execute query due to: ' + error
             raise ProgrammingError(message) from None
 
     def _after_execute(self, response: FlightStreamReader):
